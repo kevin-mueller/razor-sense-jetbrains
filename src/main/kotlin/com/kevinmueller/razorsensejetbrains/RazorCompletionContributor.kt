@@ -12,12 +12,5 @@ class RazorCompletionContributor : CompletionContributor() {
             PlatformPatterns.psiElement().with(RazorCompletionPattern()),
             RazorCompletionProvider()
         )
-
-        // always suggest when invoked manually
-        extend(
-            CompletionType.BASIC,
-            PlatformPatterns.not(PlatformPatterns.alwaysFalse()),
-            RazorCompletionProvider()
-        )
     }
 }
