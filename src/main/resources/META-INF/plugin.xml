@@ -27,6 +27,6 @@
         <completion.contributor language="HtmlCompatible"
                                 implementationClass="com.kevinmueller.razorsensejetbrains.RazorCompletionContributor"
                                 id="RazorCompletionContributor"/>
-
+        <postStartupActivity implementation="com.kevinmueller.razorsensejetbrains.ProjectStartup" />
     </extensions>
 </idea-plugin>
