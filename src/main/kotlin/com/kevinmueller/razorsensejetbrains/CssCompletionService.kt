@@ -8,9 +8,9 @@ import java.io.File
 
 @Service(Service.Level.PROJECT)
 class CssCompletionService(private val solutionProject: Project) {
-    fun getCompletions(): Array<String> {
-        //WorkspaceModel.getInstance(solutionProject).findProjects()[1].childrenEntities.filter { x -> x.isDependenciesFolder() }.first().childrenEntities.first().childrenEntities[3].childrenEntities[1].getLocationForItems().presentableUrl
-
+    var cssFilesByProjectPath: Map<String, List<String>> = emptyMap()
+    
+    fun loadCompletions() {
         // 1. for each solutionProject
         //      find index.html / index.cshtml
         //      get .css file references
@@ -26,13 +26,15 @@ class CssCompletionService(private val solutionProject: Project) {
 
         WorkspaceModel.getInstance(solutionProject).findProjects().first().getAllNestedFilesAndThis()
         
-        val cssFilesByProject = mutableMapOf<ProjectModelEntity, List<String>>()
+        val cssFilesByProjectPath = mutableMapOf<String, List<String>>()
         for (project in projects) {
-            cssFilesByProject[project] = getCssFilesFromProject(project)
+            if (project.url == null)
+                continue
+            
+            cssFilesByProjectPath[project.url!!.presentableUrl] = getCssFilesFromProject(project)
         }
-
-
-        return arrayOf("test-1", "test-2")
+        
+        this.cssFilesByProjectPath = cssFilesByProjectPath
     }
 
     private fun getCssFilesFromProject(project: ProjectModelEntity): List<String> {

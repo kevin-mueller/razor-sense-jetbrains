@@ -8,6 +8,6 @@ class ProjectStartup : ProjectActivity {
     override suspend fun execute(project: Project) {
         val service = project.service<CssCompletionService>()
         
-        service.getCompletions()
+        service.loadCompletions()
     }
 }

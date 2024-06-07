@@ -17,7 +17,10 @@ internal class RazorCompletionProvider : CompletionProvider<CompletionParameters
 
         val cssCompletionService = parameters.editor.project?.service<CssCompletionService>() ?: return
 
-        for (completion in cssCompletionService.getCompletions()) {
+        // TODO: How to get actual project path? (Use the current file and parse the path?)
+        val currentProjectPath = parameters.editor.project?.projectFilePath ?: return
+        
+        for (completion in cssCompletionService.cssFilesByProjectPath[currentProjectPath]!!) {
             result.addElement(LookupElementBuilder.create(completion))
         }
     }
