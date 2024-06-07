@@ -2,13 +2,9 @@ package com.kevinmueller.razorsensejetbrains
 
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.project.projectsDataDir
 import com.intellij.platform.backend.workspace.WorkspaceModel
-import com.intellij.platform.backend.workspace.virtualFile
-import com.intellij.workspaceModel.ide.toPath
 import com.jetbrains.rider.projectView.workspace.*
 import java.io.File
-import kotlin.io.path.listDirectoryEntries
 
 @Service(Service.Level.PROJECT)
 class CssCompletionService(private val solutionProject: Project) {
