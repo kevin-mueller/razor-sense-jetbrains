@@ -4,8 +4,11 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.projectsDataDir
 import com.intellij.platform.backend.workspace.WorkspaceModel
+import com.intellij.platform.backend.workspace.virtualFile
+import com.intellij.workspaceModel.ide.toPath
 import com.jetbrains.rider.projectView.workspace.*
 import java.io.File
+import kotlin.io.path.listDirectoryEntries
 
 @Service(Service.Level.PROJECT)
 class CssCompletionService(private val solutionProject: Project) {
@@ -26,30 +29,65 @@ class CssCompletionService(private val solutionProject: Project) {
         val projects = WorkspaceModel.getInstance(solutionProject).findProjects()
 
         WorkspaceModel.getInstance(solutionProject).findProjects().first().getAllNestedFilesAndThis()
-
+        
+        val cssFilesByProject = mutableMapOf<ProjectModelEntity, List<String>>()
         for (project in projects) {
-            val dependencies = project.childrenEntities.firstOrNull { p -> p.isDependenciesFolder() }
-
-            val targetFrameworkFolder = dependencies?.childrenEntities?.firstOrNull { p -> p.isTargetFrameworkFolder() }
-
-            val packageDependencies =
-                targetFrameworkFolder
-                    ?.childrenEntities?.firstOrNull { p -> p.isPackagesFolder() }
-                    ?.childrenEntities ?: emptyList()
-
-            val projectDependencies =
-                targetFrameworkFolder?.childrenEntities?.firstOrNull { p -> p.isProjectsFolder() }?.childrenEntities
-
-            // to get actual referenced project: projects.firstOrNull {p -> p.name == projectDependencies.first().name}.url
-            
-            val cssFiles = mutableListOf<String>()
-            for (packageDependency in packageDependencies) {
-                cssFiles.addAll(packageDependency.url?.subTreeFileUrls?.filter { x -> x.fileName.endsWith(".css") }
-                    ?.map { x -> x.url } ?: emptyList())
-            }
+            cssFilesByProject[project] = getCssFilesFromProject(project)
         }
 
 
         return arrayOf("test-1", "test-2")
+    }
+
+    private fun getCssFilesFromProject(project: ProjectModelEntity): List<String> {
+        if (project.url == null)
+            return emptyList()
+
+        val cssFiles = mutableListOf<String>()
+        File(project.url!!.parent!!.presentableUrl).walkTopDown().forEach {
+            if (it.extension == "css") {
+                cssFiles.add(it.path)
+            }
+        }
+
+        val packageDependencies = getPackageDependencies(project)
+        if (packageDependencies.isNotEmpty()) {
+            cssFiles.addAll(getCssFilesFromPackageDependencies(packageDependencies))
+        }
+
+        val projectDependencies = getProjectDependencies(project)
+        if (projectDependencies.isNotEmpty()) {
+            for (projectDependency in projectDependencies)
+                cssFiles.addAll(getCssFilesFromProject(projectDependency))
+        }
+
+        return cssFiles
+    }
+
+    private fun getProjectDependencies(project: ProjectModelEntity): List<ProjectModelEntity> {
+        return getTargetFrameworkFolder(project)?.childrenEntities?.firstOrNull { p -> p.isProjectsFolder() }?.childrenEntities
+            ?: emptyList()
+    }
+
+    private fun getPackageDependencies(project: ProjectModelEntity): List<ProjectModelEntity> {
+        return getTargetFrameworkFolder(project)
+            ?.childrenEntities?.firstOrNull { p -> p.isPackagesFolder() }
+            ?.childrenEntities ?: emptyList()
+    }
+
+    private fun getTargetFrameworkFolder(project: ProjectModelEntity): ProjectModelEntity? {
+        val dependencies = project.childrenEntities.firstOrNull { p -> p.isDependenciesFolder() }
+
+        return dependencies?.childrenEntities?.firstOrNull { p -> p.isTargetFrameworkFolder() }
+    }
+
+    private fun getCssFilesFromPackageDependencies(packageDependencies: List<ProjectModelEntity>): List<String> {
+        val cssFiles = mutableListOf<String>()
+        for (packageDependency in packageDependencies) {
+            cssFiles.addAll(packageDependency.url?.subTreeFileUrls?.filter { x -> x.fileName.endsWith(".css") }
+                ?.map { x -> x.presentableUrl } ?: emptyList())
+        }
+
+        return cssFiles
     }
 }   
