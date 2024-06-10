@@ -14,14 +14,14 @@ internal class RazorCompletionProvider : CompletionProvider<CompletionParameters
         @NotNull context: ProcessingContext,
         @NotNull result: CompletionResultSet
     ) {
-
         val cssCompletionService = parameters.editor.project?.service<CssCompletionService>() ?: return
 
-        // TODO: How to get actual project path? (Use the current file and parse the path?)
-        val currentProjectPath = parameters.editor.project?.projectFilePath ?: return
-        
-        for (completion in cssCompletionService.cssFilesByProjectPath[currentProjectPath]!!) {
-            result.addElement(LookupElementBuilder.create(completion))
+        for (completion in cssCompletionService.cssFilesByProjectPath.entries) {
+            val projectSourceDirectory = completion.key.substringBeforeLast("/")
+            
+            //TODO: this matches too much...
+            if (parameters.originalFile.virtualFile.path.contains(projectSourceDirectory))
+                result.addAllElements(completion.value.map { x -> LookupElementBuilder.create(x) })
         }
     }
 }

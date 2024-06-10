@@ -41,6 +41,8 @@ class CssCompletionService(private val solutionProject: Project) {
         if (project.url == null)
             return emptyList()
 
+        //TODO: Actually parse the classes?
+        
         val cssFiles = mutableListOf<String>()
         File(project.url!!.parent!!.presentableUrl).walkTopDown().forEach {
             if (it.extension == "css") {
