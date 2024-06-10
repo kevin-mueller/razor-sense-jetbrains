@@ -4,37 +4,66 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
 import com.intellij.platform.backend.workspace.WorkspaceModel
 import com.jetbrains.rider.projectView.workspace.*
+import org.jsoup.Jsoup
 import java.io.File
 
 @Service(Service.Level.PROJECT)
 class CssCompletionService(private val solutionProject: Project) {
-    var cssFilesByProjectPath: Map<String, List<String>> = emptyMap()
-    
-    fun loadCompletions() {
-        // 1. for each solutionProject
-        //      find index.html / index.cshtml
-        //      get .css file references
-        //      
-        //      get solutionProject package dependencies
-        //      get solutionProject "solutionProject" dependencies
-        //      
-        // 2. check dependencies, if .css references match (folder name + file name)
-        //      if yes => parse and store suggestions in dictionary (key is solutionProject)
-        //      if no => try to find .css file in current solutionProject folder and parse + store in dictionary
+    var cssCompletionItemsByProjectPath: Map<String, CssCompletionItem> = emptyMap()
 
+    fun loadCompletions() {
         val projects = WorkspaceModel.getInstance(solutionProject).findProjects()
 
         WorkspaceModel.getInstance(solutionProject).findProjects().first().getAllNestedFilesAndThis()
-        
-        val cssFilesByProjectPath = mutableMapOf<String, List<String>>()
+
+        val cssCompletionItemsByProjectPath = mutableMapOf<String, CssCompletionItem>()
         for (project in projects) {
             if (project.url == null)
                 continue
+
+            //TODO: parse the css class from the files. Don't parse twice!
+            // bool flag (isReferenced) ?
             
-            cssFilesByProjectPath[project.url!!.presentableUrl] = getCssFilesFromProject(project)
+            val cssCompletionItem =
+                CssCompletionItem(
+                    project.url!!.presentableUrl,
+                    getCssFilesFromProject(project),
+                    getAllReferencedCssFilePathsFromProject(project)
+                )
+
+            cssCompletionItemsByProjectPath[project.url!!.presentableUrl] = cssCompletionItem
         }
-        
-        this.cssFilesByProjectPath = cssFilesByProjectPath
+
+        this.cssCompletionItemsByProjectPath = cssCompletionItemsByProjectPath
+    }
+
+    private fun getAllReferencedCssFilePathsFromProject(project: ProjectModelEntity): List<String> {
+        if (project.url == null)
+            return emptyList()
+
+        val referencedCssFilePaths = mutableListOf<String>()
+        File(project.url!!.parent!!.presentableUrl).walkTopDown().forEach {
+            if ((it.extension == "html" || it.extension == "cshtml") && it.path.contains("wwwroot") && !isInArtifactFolder(
+                    it
+                )
+            ) {
+                val parsed = Jsoup.parse(it)
+                val allLinkTags = parsed.select("link")
+
+                for (linkTag in allLinkTags) {
+                    if (!linkTag.hasAttr("href"))
+                        continue
+
+                    val href = linkTag.attribute("href")
+                    if (!href.value.endsWith(".css"))
+                        continue
+
+                    referencedCssFilePaths.add(href.value)
+                }
+            }
+        }
+
+        return referencedCssFilePaths
     }
 
     private fun getCssFilesFromProject(project: ProjectModelEntity): List<String> {
@@ -42,11 +71,11 @@ class CssCompletionService(private val solutionProject: Project) {
             return emptyList()
 
         //TODO: Actually parse the classes?
-        
+
         val cssFiles = mutableListOf<String>()
         File(project.url!!.parent!!.presentableUrl).walkTopDown().forEach {
-            if (it.extension == "css") {
-                cssFiles.add(it.path)
+            if (it.extension == "css" && !isInArtifactFolder(it)) {
+                cssFiles.add(it.invariantSeparatorsPath)
             }
         }
 
@@ -90,4 +119,14 @@ class CssCompletionService(private val solutionProject: Project) {
 
         return cssFiles
     }
-}   
+
+    private fun isInArtifactFolder(file: File): Boolean {
+        return file.invariantSeparatorsPath.contains("/bin/") || file.invariantSeparatorsPath.contains("/obj/")
+    }
+}
+
+class CssCompletionItem(projectPath: String, allCssFilePaths: List<String>, allReferencedCssFilesPaths: List<String>) {
+    val ProjectPath: String = projectPath
+    val AllCssFilePaths: List<String> = allCssFilePaths
+    val AllReferencedCssFilePaths: List<String> = allCssFilePaths
+}

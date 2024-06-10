@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.utils.IMPLEMENTATION
+
 plugins {
     id("java")
     id("org.jetbrains.kotlin.jvm") version "1.9.22"
@@ -9,6 +11,10 @@ version = "1.0-SNAPSHOT"
 
 repositories {
     mavenCentral()
+}
+
+dependencies {
+    implementation("org.jsoup:jsoup:1.17.2")
 }
 
 // Configure Gradle IntelliJ Plugin

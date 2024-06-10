@@ -16,12 +16,16 @@ internal class RazorCompletionProvider : CompletionProvider<CompletionParameters
     ) {
         val cssCompletionService = parameters.editor.project?.service<CssCompletionService>() ?: return
 
-        for (completion in cssCompletionService.cssFilesByProjectPath.entries) {
+        for (completion in cssCompletionService.cssCompletionItemsByProjectPath) {
             val projectSourceDirectory = completion.key.substringBeforeLast("/")
-            
+
             //TODO: this matches too much...
             if (parameters.originalFile.virtualFile.path.contains(projectSourceDirectory))
-                result.addAllElements(completion.value.map { x -> LookupElementBuilder.create(x) })
+                result.addAllElements(completion.value.AllCssFilePaths.map { x ->
+                    LookupElementBuilder.create(
+                        x
+                    )
+                })
         }
     }
 }
