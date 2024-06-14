@@ -4,6 +4,7 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
 import com.intellij.platform.backend.workspace.WorkspaceModel
 import com.jetbrains.rider.projectView.workspace.*
+import org.h2.store.fs.FilePath
 import org.jsoup.Jsoup
 import java.io.File
 
@@ -21,19 +22,16 @@ class CssCompletionService(private val solutionProject: Project) {
             if (project.url == null)
                 continue
 
-            //TODO: parse the css class from the files. Don't parse twice!
-            // bool flag (isReferenced) ?
-            
+            // TODO bool flag (isReferenced) ?
+
             val cssCompletionItem =
                 CssCompletionItem(
-                    project.url!!.presentableUrl,
-                    getCssFilesFromProject(project),
+                    getCssClassNamesFromProject(project),
                     getAllReferencedCssFilePathsFromProject(project)
                 )
 
             cssCompletionItemsByProjectPath[project.url!!.presentableUrl] = cssCompletionItem
         }
-
         this.cssCompletionItemsByProjectPath = cssCompletionItemsByProjectPath
     }
 
@@ -66,11 +64,14 @@ class CssCompletionService(private val solutionProject: Project) {
         return referencedCssFilePaths
     }
 
-    private fun getCssFilesFromProject(project: ProjectModelEntity): List<String> {
+    private fun getCssClassNamesFromProject(project: ProjectModelEntity): List<CssClassName> {
+        val cssFiles = getAllCssFilesFromProject(project)
+        return getCssClassNamesFromCssFiles(cssFiles)
+    }
+
+    private fun getAllCssFilesFromProject(project: ProjectModelEntity): List<String> {
         if (project.url == null)
             return emptyList()
-
-        //TODO: Actually parse the classes?
 
         val cssFiles = mutableListOf<String>()
         File(project.url!!.parent!!.presentableUrl).walkTopDown().forEach {
@@ -87,10 +88,31 @@ class CssCompletionService(private val solutionProject: Project) {
         val projectDependencies = getProjectDependencies(project)
         if (projectDependencies.isNotEmpty()) {
             for (projectDependency in projectDependencies)
-                cssFiles.addAll(getCssFilesFromProject(projectDependency))
+                cssFiles.addAll(getAllCssFilesFromProject(projectDependency))
         }
 
         return cssFiles
+    }
+
+    private fun getCssClassNamesFromCssFiles(cssFilePaths: List<String>): List<CssClassName> {
+        val cssClassNames = mutableListOf<CssClassName>()
+        for (cssFile in cssFilePaths) {
+            if (cssClassNames.any { x -> x.FileName == cssFile }) {
+                continue
+            }
+
+            val cssContent = File(cssFile).readText()
+
+            // Define a regex pattern to match CSS class names
+            val classPattern = Regex("\\.([a-zA-Z0-9_-]+)\\s*\\{")
+
+            // Find all matches in the CSS content
+            val classNames = classPattern.findAll(cssContent).map { it.groupValues[1] }.toSet()
+
+            cssClassNames.add(CssClassName(classNames, File(cssFile).name, cssFile))
+        }
+
+        return cssClassNames
     }
 
     private fun getProjectDependencies(project: ProjectModelEntity): List<ProjectModelEntity> {
@@ -125,8 +147,13 @@ class CssCompletionService(private val solutionProject: Project) {
     }
 }
 
-class CssCompletionItem(projectPath: String, allCssFilePaths: List<String>, allReferencedCssFilesPaths: List<String>) {
-    val ProjectPath: String = projectPath
-    val AllCssFilePaths: List<String> = allCssFilePaths
-    val AllReferencedCssFilePaths: List<String> = allCssFilePaths
+class CssCompletionItem(allCssClassNames: List<CssClassName>, allReferencedCssFilesPaths: List<String>) {
+    val AllCssClassNames: List<CssClassName> = allCssClassNames
+    val AllReferencedCssFilePaths: List<String> = allReferencedCssFilesPaths
+}
+
+class CssClassName(allCssClassNames: Set<String>, fileName: String, filePath: String) {
+    val AllCssClassNames: Set<String> = allCssClassNames
+    val FileName = fileName
+    val FilePath = filePath
 }
