@@ -4,7 +4,6 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
 import com.intellij.platform.backend.workspace.WorkspaceModel
 import com.jetbrains.rider.projectView.workspace.*
-import org.h2.store.fs.FilePath
 import org.jsoup.Jsoup
 import java.io.File
 
@@ -22,8 +21,6 @@ class CssCompletionService(private val solutionProject: Project) {
             if (project.url == null)
                 continue
 
-            // TODO bool flag (isReferenced) ?
-
             val cssCompletionItem =
                 CssCompletionItem(
                     getCssClassNamesFromProject(project),
@@ -39,11 +36,10 @@ class CssCompletionService(private val solutionProject: Project) {
         if (project.url == null)
             return emptyList()
 
-        val referencedCssFilePaths = mutableListOf<String>()
+         val referencedCssFilePaths = mutableListOf<String>()
         File(project.url!!.parent!!.presentableUrl).walkTopDown().forEach {
-            if ((it.extension == "html" || it.extension == "cshtml") && it.path.contains("wwwroot") && !isInArtifactFolder(
-                    it
-                )
+            if ((it.extension == "html" || it.extension == "cshtml") && it.path.contains("wwwroot")
+                && !isInArtifactFolder(it)
             ) {
                 val parsed = Jsoup.parse(it)
                 val allLinkTags = parsed.select("link")
@@ -60,6 +56,9 @@ class CssCompletionService(private val solutionProject: Project) {
                 }
             }
         }
+        
+        for (projectDependency in getProjectDependencies(project))
+            referencedCssFilePaths.addAll(getAllReferencedCssFilePathsFromProject(projectDependency))
 
         return referencedCssFilePaths
     }
@@ -97,16 +96,14 @@ class CssCompletionService(private val solutionProject: Project) {
     private fun getCssClassNamesFromCssFiles(cssFilePaths: List<String>): List<CssClassName> {
         val cssClassNames = mutableListOf<CssClassName>()
         for (cssFile in cssFilePaths) {
-            if (cssClassNames.any { x -> x.FileName == cssFile }) {
+            if (cssClassNames.any { x -> x.fileName == cssFile }) {
                 continue
             }
 
             val cssContent = File(cssFile).readText()
 
-            // Define a regex pattern to match CSS class names
             val classPattern = Regex("\\.([a-zA-Z0-9_-]+)\\s*\\{")
 
-            // Find all matches in the CSS content
             val classNames = classPattern.findAll(cssContent).map { it.groupValues[1] }.toSet()
 
             cssClassNames.add(CssClassName(classNames, File(cssFile).name, cssFile))
@@ -147,13 +144,14 @@ class CssCompletionService(private val solutionProject: Project) {
     }
 }
 
-class CssCompletionItem(allCssClassNames: List<CssClassName>, allReferencedCssFilesPaths: List<String>) {
-    val AllCssClassNames: List<CssClassName> = allCssClassNames
-    val AllReferencedCssFilePaths: List<String> = allReferencedCssFilesPaths
+class CssCompletionItem(
+    private val allCssClassNames: List<CssClassName>,
+    private val allReferencedCssFilesPaths: List<String>
+) {
+    fun getReferencedCssClassNames(): Set<CssClassName> {
+        return allCssClassNames.filter { cssClassName -> allReferencedCssFilesPaths.contains(cssClassName.filePath) }
+            .toSet()
+    }
 }
 
-class CssClassName(allCssClassNames: Set<String>, fileName: String, filePath: String) {
-    val AllCssClassNames: Set<String> = allCssClassNames
-    val FileName = fileName
-    val FilePath = filePath
-}
+class CssClassName(val cssClassReferences: Set<String>, val fileName: String, val filePath: String)

@@ -5,12 +5,12 @@ import com.intellij.codeInsight.completion.CompletionProvider
 import com.intellij.codeInsight.completion.CompletionResultSet
 import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.icons.AllIcons
-import com.intellij.icons.AllIcons.Icons
 import com.intellij.openapi.components.service
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
 import com.intellij.util.ProcessingContext
 import org.jetbrains.annotations.NotNull
@@ -24,14 +24,13 @@ internal class RazorCompletionProvider : CompletionProvider<CompletionParameters
         val cssCompletionService = parameters.editor.project?.service<CssCompletionService>() ?: return
 
         for (completion in cssCompletionService.cssCompletionItemsByProjectPath) {
-            val projectSourceDirectory = completion.key.substringBeforeLast("/")
 
             //TODO: this matches too much...
-            if (parameters.originalFile.virtualFile.path.contains(projectSourceDirectory)) {
-                for (cssClassNameForFile in completion.value.AllCssClassNames) {
-                    for (x in cssClassNameForFile.AllCssClassNames) {
+            if (fileIsFromProjectPath(completion.key, parameters.originalFile)) {
+                for (cssClassNameForFile in completion.value.getReferencedCssClassNames()) {
+                    for (x in cssClassNameForFile.cssClassReferences) {
                         val psiElement =
-                            findPsiElementFromLineNumber(parameters.editor.project!!, cssClassNameForFile.FilePath, 5)
+                            findPsiElementFromLineNumber(parameters.editor.project!!, cssClassNameForFile.filePath, 5)
 
                         val lookupElement = if (psiElement != null) LookupElementBuilder.createWithSmartPointer(
                             x,
@@ -39,12 +38,27 @@ internal class RazorCompletionProvider : CompletionProvider<CompletionParameters
                         ) else LookupElementBuilder.create(x)
                         result.addElement(
                             lookupElement
-                                .withTypeText(cssClassNameForFile.FileName, AllIcons.Xml.Css_class, true)
+                                .withTypeText(cssClassNameForFile.fileName, AllIcons.Xml.Css_class, true)
                         )
                     }
                 }
             }
         }
+    }
+
+    private fun fileIsFromProjectPath(projectPath: String, originalFile: PsiFile): Boolean {
+        var currentDirectory = originalFile.containingDirectory
+        val projectFileName = projectPath.substringAfterLast("/")
+
+        while (currentDirectory != null) {
+            val projectFile = currentDirectory.findFile(projectFileName)
+            if (projectFile != null)
+                return true
+
+            currentDirectory = currentDirectory.parent
+        }
+
+        return false
     }
 
     private fun findPsiElementFromLineNumber(
