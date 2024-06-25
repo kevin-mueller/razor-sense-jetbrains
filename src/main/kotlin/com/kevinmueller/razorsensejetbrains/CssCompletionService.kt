@@ -32,15 +32,19 @@ class CssCompletionService(private val solutionProject: Project) {
         this.cssCompletionItemsByProjectPath = cssCompletionItemsByProjectPath
     }
 
-    private fun getAllReferencedCssFilePathsFromProject(project: ProjectModelEntity): List<String> {
+    private fun getAllReferencedCssFilePathsFromProject(project: ProjectModelEntity): IndexFileInfo {
         if (project.url == null)
-            return emptyList()
+            return IndexFileInfo(emptyList(), false)
 
-         val referencedCssFilePaths = mutableListOf<String>()
+        var foundIndexHtmlFile = false
+
+        val referencedCssFilePaths = mutableListOf<String>()
         File(project.url!!.parent!!.presentableUrl).walkTopDown().forEach {
             if ((it.extension == "html" || it.extension == "cshtml") && it.path.contains("wwwroot")
                 && !isInArtifactFolder(it)
             ) {
+                foundIndexHtmlFile = true
+
                 val parsed = Jsoup.parse(it)
                 val allLinkTags = parsed.select("link")
 
@@ -56,11 +60,11 @@ class CssCompletionService(private val solutionProject: Project) {
                 }
             }
         }
-        
-        for (projectDependency in getProjectDependencies(project))
-            referencedCssFilePaths.addAll(getAllReferencedCssFilePathsFromProject(projectDependency))
 
-        return referencedCssFilePaths
+        for (projectDependency in getProjectDependencies(project))
+            referencedCssFilePaths.addAll(getAllReferencedCssFilePathsFromProject(projectDependency).referencedCssFilePaths)
+
+        return IndexFileInfo(referencedCssFilePaths, foundIndexHtmlFile)
     }
 
     private fun getCssClassNamesFromProject(project: ProjectModelEntity): List<CssClassName> {
@@ -146,12 +150,21 @@ class CssCompletionService(private val solutionProject: Project) {
 
 class CssCompletionItem(
     private val allCssClassNames: List<CssClassName>,
-    private val allReferencedCssFilesPaths: List<String>
+    private val indexFileInfo: IndexFileInfo
 ) {
     fun getReferencedCssClassNames(): Set<CssClassName> {
-        return allCssClassNames.filter { cssClassName -> allReferencedCssFilesPaths.contains(cssClassName.filePath) }
-            .toSet()
+        return if (indexFileInfo.hasIndexHtmlFile) {
+            allCssClassNames.filter { cssClassName ->
+                indexFileInfo.referencedCssFilePaths.contains(
+                    cssClassName.filePath
+                )
+            }.toSet()
+        } else {
+            allCssClassNames.toSet()
+        }
     }
 }
 
 class CssClassName(val cssClassReferences: Set<String>, val fileName: String, val filePath: String)
+
+class IndexFileInfo(val referencedCssFilePaths: List<String>, val hasIndexHtmlFile: Boolean);
