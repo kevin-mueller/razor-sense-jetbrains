@@ -26,6 +26,7 @@ internal class RazorCompletionProvider : CompletionProvider<CompletionParameters
         for (completion in cssCompletionService.cssCompletionItemsByProjectPath) {
 
             //TODO: this matches too much...
+            //      not sure if http parsed classes match here 
             if (fileIsFromProjectPath(completion.key, parameters.originalFile)) {
                 for (cssClassNameForFile in completion.value.getReferencedCssClassNames()) {
                     for (x in cssClassNameForFile.cssClassReferences) {

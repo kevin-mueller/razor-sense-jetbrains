@@ -6,6 +6,7 @@ import com.intellij.patterns.PlatformPatterns.psiElement
 import com.intellij.patterns.PsiElementPattern
 import com.intellij.patterns.XmlPatterns
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiFile
 import com.intellij.psi.xml.XmlAttribute
 import com.intellij.psi.xml.XmlElementType.*
 

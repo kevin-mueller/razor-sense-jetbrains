@@ -3,9 +3,11 @@ package com.kevinmueller.razorsensejetbrains
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
 import com.intellij.platform.backend.workspace.WorkspaceModel
+import com.intellij.profiler.validateLocalPath
 import com.jetbrains.rider.projectView.workspace.*
 import org.jsoup.Jsoup
 import java.io.File
+import java.net.URI
 
 @Service(Service.Level.PROJECT)
 class CssCompletionService(private val solutionProject: Project) {
@@ -21,10 +23,17 @@ class CssCompletionService(private val solutionProject: Project) {
             if (project.url == null)
                 continue
 
+            val localCssClassNames = getLocalCssClassNamesFromProject(project)
+
+            val allReferencedCssFilePaths = getAllReferencedCssFilePathsFromProject(project)
+
+            val remoteCssClassNames = getRemoteCssClassNamesFromUrls(allReferencedCssFilePaths.referencedCssFilePaths)
+            val allCssClassNames = localCssClassNames.union(remoteCssClassNames)
+
             val cssCompletionItem =
                 CssCompletionItem(
-                    getCssClassNamesFromProject(project),
-                    getAllReferencedCssFilePathsFromProject(project)
+                    allCssClassNames,
+                    allReferencedCssFilePaths
                 )
 
             cssCompletionItemsByProjectPath[project.url!!.presentableUrl] = cssCompletionItem
@@ -67,8 +76,15 @@ class CssCompletionService(private val solutionProject: Project) {
         return IndexFileInfo(referencedCssFilePaths, foundIndexHtmlFile)
     }
 
-    private fun getCssClassNamesFromProject(project: ProjectModelEntity): List<CssClassName> {
+    private fun getLocalCssClassNamesFromProject(project: ProjectModelEntity): MutableList<CssClassName> {
         val cssFiles = getAllCssFilesFromProject(project)
+        return getCssClassNamesFromCssFiles(cssFiles).toMutableList()
+    }
+
+    private fun getRemoteCssClassNamesFromUrls(
+        referencedCssFilePaths: List<String>
+    ): List<CssClassName> {
+        val cssFiles = referencedCssFilePaths.filter { x -> x.startsWith("https://") || x.startsWith("http://") }
         return getCssClassNamesFromCssFiles(cssFiles)
     }
 
@@ -104,11 +120,16 @@ class CssCompletionService(private val solutionProject: Project) {
                 continue
             }
 
-            val cssContent = File(cssFile).readText()
+            //TODO: some error handling
+            val cssContent =
+                if (cssFile.startsWith("https://") || cssFile.startsWith("http://"))
+                    URI(cssFile).toURL().readText()
+                else
+                    File(cssFile).readText()
 
             val classPattern = Regex("\\.([a-zA-Z0-9_-]+)\\s*\\{")
 
-            val classNames = classPattern.findAll(cssContent).map { it.groupValues[1] }.toSet()
+            val classNames = classPattern.findAll(cssContent).map { it.groupValues[1] }.toSet().sorted().toSet()
 
             cssClassNames.add(CssClassName(classNames, File(cssFile).name, cssFile))
         }
@@ -149,7 +170,7 @@ class CssCompletionService(private val solutionProject: Project) {
 }
 
 class CssCompletionItem(
-    private val allCssClassNames: List<CssClassName>,
+    private val allCssClassNames: Set<CssClassName>,
     private val indexFileInfo: IndexFileInfo
 ) {
     fun getReferencedCssClassNames(): Set<CssClassName> {
