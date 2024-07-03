@@ -120,12 +120,16 @@ class CssCompletionService(private val solutionProject: Project) {
                 continue
             }
 
-            //TODO: some error handling
-            val cssContent =
-                if (cssFile.startsWith("https://") || cssFile.startsWith("http://"))
-                    URI(cssFile).toURL().readText()
-                else
-                    File(cssFile).readText()
+            var cssContent = ""
+            try {
+                cssContent =
+                    if (cssFile.startsWith("https://") || cssFile.startsWith("http://"))
+                        URI(cssFile).toURL().readText()
+                    else
+                        File(cssFile).readText()
+            } catch (_: Exception) {
+                // ignored
+            }
 
             val classPattern = Regex("\\.([a-zA-Z0-9_-]+)\\s*\\{")
 
