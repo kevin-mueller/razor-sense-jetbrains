@@ -28,5 +28,6 @@
                                 implementationClass="com.kevinmueller.razorsensejetbrains.RazorCompletionContributor"
                                 id="RazorCompletionContributor"/>
         <postStartupActivity implementation="com.kevinmueller.razorsensejetbrains.ProjectStartup" />
+        <vfs.asyncListener implementation="com.kevinmueller.razorsensejetbrains.FileChangeListener"/>
     </extensions>
 </idea-plugin>
