@@ -17,13 +17,9 @@ class FileChangeListener : AsyncFileListener {
 
         val activeProject = ProjectUtil.getActiveProject()
         val service = activeProject?.service<CssCompletionService>()
-        service ?: return null 
+        service ?: return null
 
         return object : AsyncFileListener.ChangeApplier {
-            override fun beforeVfsChange() {
-                // Actions to perform before the VFS change is applied
-            }
-
             override fun afterVfsChange() {
                 //TODO: optimize this? no need to update everything, only changed file.
                 service.loadCompletions()
