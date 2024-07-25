@@ -1,24 +1,51 @@
 package com.kevinmueller.razorsensejetbrains
 
+import com.intellij.javascript.debugger.execution.xDebugProcessStarter
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.wm.StatusBar
+import com.intellij.openapi.wm.WindowManager
 import com.intellij.platform.backend.workspace.WorkspaceModel
 import com.intellij.profiler.validateLocalPath
 import com.jetbrains.rider.projectView.workspace.*
+import com.jetbrains.rider.test.scriptingApi.measure
+import com.jetbrains.rider.test.scriptingApi.newProjectAction
 import org.jsoup.Jsoup
 import java.io.File
 import java.net.URI
+import kotlin.system.measureTimeMillis
 
 @Service(Service.Level.PROJECT)
 class CssCompletionService(private val solutionProject: Project) {
     var cssCompletionItemsByProjectPath: Map<String, CssCompletionItem> = emptyMap()
 
     fun loadCompletions() {
+        val totalCssClassNames: Int
+        val executionTime = measureTimeMillis {
+            totalCssClassNames = updateCompletions()
+        }
+
+        val allFiles = mutableListOf<String>()
+        for (item in cssCompletionItemsByProjectPath) {
+            for (cssClassName in item.value.allCssClassNames) {
+                allFiles.add(cssClassName.filePath)
+            }
+        }
+
+        StatusBar.Info.set(
+            "Parsed $totalCssClassNames css classes from ${
+                allFiles.distinct().count()
+            } files in $executionTime ms", solutionProject
+        )
+    }
+
+    private fun updateCompletions(): Int {
         val projects = WorkspaceModel.getInstance(solutionProject).findProjects()
 
         WorkspaceModel.getInstance(solutionProject).findProjects().first().getAllNestedFilesAndThis()
 
         val cssCompletionItemsByProjectPath = mutableMapOf<String, CssCompletionItem>()
+        var totalCssClassNames = 0;
         for (project in projects) {
             if (project.url == null)
                 continue
@@ -30,6 +57,7 @@ class CssCompletionService(private val solutionProject: Project) {
             val remoteCssClassNames = getRemoteCssClassNamesFromUrls(allReferencedCssFilePaths.referencedCssFilePaths)
             val allCssClassNames = localCssClassNames.union(remoteCssClassNames)
 
+            totalCssClassNames += allCssClassNames.flatMap { x -> x.cssClassReferences }.count()
             val cssCompletionItem =
                 CssCompletionItem(
                     allCssClassNames,
@@ -39,6 +67,8 @@ class CssCompletionService(private val solutionProject: Project) {
             cssCompletionItemsByProjectPath[project.url!!.presentableUrl] = cssCompletionItem
         }
         this.cssCompletionItemsByProjectPath = cssCompletionItemsByProjectPath
+
+        return totalCssClassNames;
     }
 
     private fun getAllReferencedCssFilePathsFromProject(project: ProjectModelEntity): IndexFileInfo {
@@ -174,7 +204,7 @@ class CssCompletionService(private val solutionProject: Project) {
 }
 
 class CssCompletionItem(
-    private val allCssClassNames: Set<CssClassName>,
+    val allCssClassNames: Set<CssClassName>,
     private val indexFileInfo: IndexFileInfo
 ) {
     fun getReferencedCssClassNames(): Set<CssClassName> {
