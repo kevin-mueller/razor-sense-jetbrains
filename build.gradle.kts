@@ -1,5 +1,3 @@
-import org.jetbrains.kotlin.gradle.utils.IMPLEMENTATION
-
 plugins {
     id("java")
     id("org.jetbrains.kotlin.jvm") version "1.9.22"
@@ -7,7 +5,7 @@ plugins {
 }
 
 group = "com.kevinmueller"
-version = "1.0-SNAPSHOT"
+version = "1.0"
 
 repositories {
     mavenCentral()
