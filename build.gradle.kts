@@ -35,7 +35,7 @@ tasks {
 
     patchPluginXml {
         sinceBuild.set("232")
-        untilBuild.set(null)
+        untilBuild.set("")
     }
 
     signPlugin {
