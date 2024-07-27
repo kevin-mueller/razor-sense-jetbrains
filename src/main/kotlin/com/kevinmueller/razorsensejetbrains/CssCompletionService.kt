@@ -1,15 +1,11 @@
 package com.kevinmueller.razorsensejetbrains
 
-import com.intellij.javascript.debugger.execution.xDebugProcessStarter
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.wm.StatusBar
-import com.intellij.openapi.wm.WindowManager
 import com.intellij.platform.backend.workspace.WorkspaceModel
-import com.intellij.profiler.validateLocalPath
 import com.jetbrains.rider.projectView.workspace.*
-import com.jetbrains.rider.test.scriptingApi.measure
-import com.jetbrains.rider.test.scriptingApi.newProjectAction
 import org.jsoup.Jsoup
 import java.io.File
 import java.net.URI
@@ -78,7 +74,7 @@ class CssCompletionService(private val solutionProject: Project) {
         var foundIndexHtmlFile = false
 
         val referencedCssFilePaths = mutableListOf<String>()
-        File(project.url!!.parent!!.presentableUrl).walkTopDown().forEach {
+        File(project.parentEntity!!.url!!.presentableUrl).walkTopDown().forEach {
             if ((it.extension == "html" || it.extension == "cshtml") && it.path.contains("wwwroot")
                 && !isInArtifactFolder(it)
             ) {
@@ -123,7 +119,7 @@ class CssCompletionService(private val solutionProject: Project) {
             return emptyList()
 
         val cssFiles = mutableListOf<String>()
-        File(project.url!!.parent!!.presentableUrl).walkTopDown().forEach {
+        File(project.parentEntity!!.url!!.presentableUrl).walkTopDown().forEach {
             if (it.extension == "css" && !isInArtifactFolder(it)) {
                 cssFiles.add(it.invariantSeparatorsPath)
             }
@@ -191,8 +187,10 @@ class CssCompletionService(private val solutionProject: Project) {
     private fun getCssFilesFromPackageDependencies(packageDependencies: List<ProjectModelEntity>): List<String> {
         val cssFiles = mutableListOf<String>()
         for (packageDependency in packageDependencies) {
-            cssFiles.addAll(packageDependency.url?.subTreeFileUrls?.filter { x -> x.fileName.endsWith(".css") }
-                ?.map { x -> x.presentableUrl } ?: emptyList())
+            cssFiles.addAll(
+                VfsUtil.collectChildrenRecursively(packageDependency.getVirtualFileAsContentRoot()!!)
+                    .filter { x -> x.extension == "css" }
+                    .map { x -> x.presentableUrl })
         }
 
         return cssFiles
