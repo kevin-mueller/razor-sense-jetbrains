@@ -25,7 +25,7 @@ class CssCompletionService(private val solutionProject: Project) {
 
         val allFiles = mutableListOf<String>()
         for (item in cssCompletionItemsByProjectPath) {
-            for (cssClassName in item.value.allCssClassNames) {
+            for (cssClassName in item.value.cssClassNameFileReferences) {
                 allFiles.add(cssClassName.filePath)
             }
         }
@@ -54,7 +54,7 @@ class CssCompletionService(private val solutionProject: Project) {
             val remoteCssClassNames = getRemoteCssClassNamesFromUrls(allReferencedCssFilePaths.referencedCssFilePaths)
             val allCssClassNames = localCssClassNames.union(remoteCssClassNames)
 
-            totalCssClassNames += allCssClassNames.flatMap { x -> x.cssClassReferences }.count()
+            totalCssClassNames += allCssClassNames.flatMap { x -> x.cssClassNames }.count()
             val cssCompletionItem = CssCompletionItem(
                 allCssClassNames, allReferencedCssFilePaths
             )
@@ -101,14 +101,14 @@ class CssCompletionService(private val solutionProject: Project) {
         return IndexFileInfo(referencedCssFilePaths, foundIndexHtmlFile)
     }
 
-    private fun getLocalCssClassNamesFromProject(project: ProjectModelEntity): MutableList<CssClassName> {
+    private fun getLocalCssClassNamesFromProject(project: ProjectModelEntity): MutableList<CssClassNameFileReference> {
         val cssFiles = getAllCssFilesFromProject(project)
         return getCssClassNamesFromCssFiles(cssFiles).toMutableList()
     }
 
     private fun getRemoteCssClassNamesFromUrls(
         referencedCssFilePaths: List<String>
-    ): List<CssClassName> {
+    ): List<CssClassNameFileReference> {
         val cssFiles = referencedCssFilePaths.filter { x -> x.startsWith("https://") || x.startsWith("http://") }
         return getCssClassNamesFromCssFiles(cssFiles)
     }
@@ -136,8 +136,8 @@ class CssCompletionService(private val solutionProject: Project) {
         return cssFiles
     }
 
-    private fun getCssClassNamesFromCssFiles(cssFilePaths: List<String>): List<CssClassName> {
-        val cssClassNames = mutableListOf<CssClassName>()
+    private fun getCssClassNamesFromCssFiles(cssFilePaths: List<String>): List<CssClassNameFileReference> {
+        val cssClassNames = mutableListOf<CssClassNameFileReference>()
         for (cssFile in cssFilePaths) {
             if (cssClassNames.any { x -> x.fileName == cssFile }) {
                 continue
@@ -156,7 +156,7 @@ class CssCompletionService(private val solutionProject: Project) {
 
             val classNames = classPattern.findAll(cssContent).map { it.groupValues[1] }.toSet().sorted().toSet()
 
-            cssClassNames.add(CssClassName(classNames, File(cssFile).name, cssFile))
+            cssClassNames.add(CssClassNameFileReference(classNames, File(cssFile).name, cssFile))
         }
 
         return cssClassNames
@@ -200,21 +200,21 @@ class CssCompletionService(private val solutionProject: Project) {
 }
 
 class CssCompletionItem(
-    val allCssClassNames: Set<CssClassName>, private val indexFileInfo: IndexFileInfo
+    val cssClassNameFileReferences: Set<CssClassNameFileReference>, private val indexFileInfo: IndexFileInfo
 ) {
-    fun getReferencedCssClassNames(): Set<CssClassName> {
+    fun getReferencedCssClassNames(): Set<CssClassNameFileReference> {
         return if (indexFileInfo.hasIndexHtmlFile) {
-            allCssClassNames.filter { cssClassName ->
+            cssClassNameFileReferences.filter { cssClassName ->
                 indexFileInfo.referencedCssFilePaths.contains(
                     cssClassName.filePath
                 )
             }.toSet()
         } else {
-            allCssClassNames.toSet()
+            cssClassNameFileReferences.toSet()
         }
     }
 }
 
-class CssClassName(val cssClassReferences: Set<String>, val fileName: String, val filePath: String)
+class CssClassNameFileReference(val cssClassNames: Set<String>, val fileName: String, val filePath: String)
 
 class IndexFileInfo(val referencedCssFilePaths: List<String>, val hasIndexHtmlFile: Boolean);

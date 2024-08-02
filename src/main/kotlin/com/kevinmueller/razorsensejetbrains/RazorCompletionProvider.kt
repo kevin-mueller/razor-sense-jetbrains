@@ -29,7 +29,7 @@ internal class RazorCompletionProvider : CompletionProvider<CompletionParameters
             //      not sure if http parsed classes match here 
             if (fileIsFromProjectPath(completion.key, parameters.originalFile)) {
                 for (cssClassNameForFile in completion.value.getReferencedCssClassNames()) {
-                    for (x in cssClassNameForFile.cssClassReferences) {
+                    for (x in cssClassNameForFile.cssClassNames) {
                         val psiElement =
                             findPsiElementFromLineNumber(parameters.editor.project!!, cssClassNameForFile.filePath, 5)
 
