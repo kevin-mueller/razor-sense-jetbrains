@@ -1,7 +1,9 @@
 # Razor Sense
 This plugin aims to improve your experience with Blazor in JetBrains Rider.
 
-## Currently features
+Get it from the [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/24962-razor-sense).
+
+## Current features
 
 ### Better Css Class Completion
 The existing completion for class attributes like this is pretty lackluster.
