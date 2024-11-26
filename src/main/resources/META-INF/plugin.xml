@@ -24,10 +24,10 @@
     <!-- Extension points defined by the plugin.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
-        <completion.contributor language="HtmlCompatible"
-                                implementationClass="com.kevinmueller.razorsensejetbrains.RazorCompletionContributor"
-                                id="RazorCompletionContributor"/>
-        <postStartupActivity implementation="com.kevinmueller.razorsensejetbrains.ProjectStartup" />
+        <completion.contributor
+                implementationClass="com.kevinmueller.razorsensejetbrains.RazorCompletionContributor"
+                id="RazorCompletionContributor" language="HtmlCompatible"/>
+        <postStartupActivity implementation="com.kevinmueller.razorsensejetbrains.ProjectStartup"/>
         <vfs.asyncListener implementation="com.kevinmueller.razorsensejetbrains.FileChangeListener"/>
     </extensions>
 </idea-plugin>

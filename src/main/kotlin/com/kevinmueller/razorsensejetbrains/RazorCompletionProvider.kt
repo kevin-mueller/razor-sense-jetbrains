@@ -39,12 +39,15 @@ internal class RazorCompletionProvider : CompletionProvider<CompletionParameters
                         ) else LookupElementBuilder.create(x)
                         result.addElement(
                             lookupElement
-                                .withTypeText(cssClassNameForFile.fileName, AllIcons.Xml.Css_class, true)
+                                .withIcon(AllIcons.Xml.Css_class)
+                                .withTypeText(cssClassNameForFile.fileName, true)
                         )
                     }
                 }
             }
         }
+        
+        result.stopHere()
     }
 
     private fun fileIsFromProjectPath(projectPath: String, originalFile: PsiFile): Boolean {
