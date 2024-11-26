@@ -23,7 +23,7 @@ internal class RazorCompletionProvider : CompletionProvider<CompletionParameters
             //TODO: this matches too much...
             //      not sure if http parsed classes match here 
             if (fileIsFromProjectPath(completion.key, parameters.originalFile)) {
-                for (cssClassNameForFile in completion.value.getReferencedCssClassNames()) {
+                for (cssClassNameForFile in completion.value.getReferencedCssClassNames(parameters.originalFile.name)) {
                     for (cssClassName in cssClassNameForFile.cssClassNames) {
                         val lookupElement = LookupElementBuilder.create(cssClassName)
                         result.addElement(
