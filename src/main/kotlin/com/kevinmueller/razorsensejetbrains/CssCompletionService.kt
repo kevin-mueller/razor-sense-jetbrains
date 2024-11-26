@@ -51,7 +51,7 @@ class CssCompletionService(private val solutionProject: Project) {
 
             val allReferencedCssFilePaths = getAllReferencedCssFilePathsFromProject(project)
 
-            val remoteCssClassNames = getRemoteCssClassNamesFromUrls(allReferencedCssFilePaths.referencedCssFilePaths)
+            val remoteCssClassNames = getRemoteCssClassNamesFromUrls(allReferencedCssFilePaths.referencedCssRelativeFilePaths)
             val allCssClassNames = localCssClassNames.union(remoteCssClassNames)
 
             totalCssClassNames += allCssClassNames.flatMap { x -> x.cssClassNames }.count()
@@ -95,7 +95,7 @@ class CssCompletionService(private val solutionProject: Project) {
         }
 
         for (projectDependency in getProjectDependencies(project)) referencedCssFilePaths.addAll(
-            getAllReferencedCssFilePathsFromProject(projectDependency).referencedCssFilePaths
+            getAllReferencedCssFilePathsFromProject(projectDependency).referencedCssRelativeFilePaths
         )
 
         return IndexFileInfo(referencedCssFilePaths, foundIndexHtmlFile)
@@ -184,7 +184,7 @@ class CssCompletionService(private val solutionProject: Project) {
             // cannot use VFS, because its null for package dependencies
             var cssFilesFromPackage = packageDependency.getFile()?.walkTopDown()?.filter { x -> x.extension == "css" }
                 ?.map { x -> x.invariantSeparatorsPath }?.toList()
-            
+
             if (cssFilesFromPackage == null)
                 cssFilesFromPackage = emptyList()
 
@@ -205,9 +205,11 @@ class CssCompletionItem(
     fun getReferencedCssClassNames(): Set<CssClassNameFileReference> {
         return if (indexFileInfo.hasIndexHtmlFile) {
             cssClassNameFileReferences.filter { cssClassName ->
-                indexFileInfo.referencedCssFilePaths.contains(
-                    cssClassName.filePath
-                )
+                indexFileInfo.referencedCssRelativeFilePaths.any { relativeFilePath ->
+                    cssClassName.filePath.contains(
+                        relativeFilePath
+                    )
+                }
             }.toSet()
         } else {
             cssClassNameFileReferences.toSet()
@@ -217,4 +219,4 @@ class CssCompletionItem(
 
 class CssClassNameFileReference(val cssClassNames: Set<String>, val fileName: String, val filePath: String)
 
-class IndexFileInfo(val referencedCssFilePaths: List<String>, val hasIndexHtmlFile: Boolean);
+class IndexFileInfo(val referencedCssRelativeFilePaths: List<String>, val hasIndexHtmlFile: Boolean);
