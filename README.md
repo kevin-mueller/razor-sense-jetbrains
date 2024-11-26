@@ -16,6 +16,9 @@ It only works if the file you're editing is in a web project, and only classes f
 
 With this plugin these issues are fixed. Even css classes from external libraries, such as [MudBlazor](https://mudblazor.com/), or referenced files via `<link href="..." />` are considered for completion.
 
+#### Scoped Css Support
+Scoped css [(css isolation)](https://learn.microsoft.com/en-us/aspnet/core/blazor/components/css-isolation?view=aspnetcore-9.0) is also supported. Css classes from scoped css files will only show up in completions for their respective razor components.
+
 
 ### ... More?
 If you have any ideas to improve this plugin further and make the experience of working with Blazor even better, feel free to create an issue, or open a PR yourself. :)
