@@ -1,10 +1,10 @@
 plugins {
     id("org.jetbrains.kotlin.jvm") version "1.9.22"
-    id("org.jetbrains.intellij.platform") version "2.0.0-rc2"
+    id("org.jetbrains.intellij.platform") version "2.1.0"
 }
 
 group = "com.kevinmueller"
-version = "1.1.0"
+version = "1.1.1"
 
 repositories {
     mavenCentral()
@@ -16,7 +16,7 @@ repositories {
 }
 
 dependencies {
-    implementation("org.jsoup:jsoup:1.17.2")
+    implementation("org.jsoup:jsoup:1.18.2")
     intellijPlatform {
         rider("2023.2")
         instrumentationTools()
