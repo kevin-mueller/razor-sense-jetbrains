@@ -40,8 +40,6 @@ class CssCompletionService(private val solutionProject: Project) {
     private fun updateCompletions(): Int {
         val projects = WorkspaceModel.getInstance(solutionProject).findProjects()
 
-        WorkspaceModel.getInstance(solutionProject).findProjects().first().getAllNestedFilesAndThis()
-
         val cssCompletionItemsByProjectPath = mutableMapOf<String, CssCompletionItem>()
         var totalCssClassNames = 0
         for (project in projects) {
