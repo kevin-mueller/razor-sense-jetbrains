@@ -1,7 +1,6 @@
-package com.kevinmueller.razorsensejetbrains
+package com.kevinmueller.razorsensejetbrains.cssClassCompletion
 
 import com.intellij.codeInsight.completion.CompletionContributor
-import com.intellij.codeInsight.completion.CompletionInitializationContext
 import com.intellij.codeInsight.completion.CompletionType
 import com.intellij.patterns.PlatformPatterns.psiElement
 import com.intellij.patterns.XmlPatterns

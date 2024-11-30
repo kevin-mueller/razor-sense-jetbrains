@@ -1,4 +1,4 @@
-package com.kevinmueller.razorsensejetbrains
+package com.kevinmueller.razorsensejetbrains.cssClassCompletion
 
 import com.intellij.codeInsight.completion.CompletionParameters
 import com.intellij.codeInsight.completion.CompletionProvider
@@ -22,16 +22,16 @@ internal class RazorCompletionProvider : CompletionProvider<CompletionParameters
 
             //TODO: this matches too much...
             //      not sure if http parsed classes match here 
-            if (fileIsFromProjectPath(completion.key, parameters.originalFile)) {
-                for (cssClassNameForFile in completion.value.getReferencedCssClassNames(parameters.originalFile.name)) {
-                    for (cssClassName in cssClassNameForFile.cssClassNames) {
-                        val lookupElement = LookupElementBuilder.create(cssClassName)
-                        result.addElement(
-                            lookupElement
-                                .withIcon(AllIcons.Xml.Css_class)
-                                .withTypeText(cssClassNameForFile.fileName, true)
-                        )
-                    }
+            if (!fileIsFromProjectPath(completion.key, parameters.originalFile)) continue
+            
+            for (cssClassNameForFile in completion.value.getReferencedCssClasses(parameters.originalFile.name)) {
+                for (cssClassName in cssClassNameForFile.cssClassNames) {
+                    val lookupElement = LookupElementBuilder.create(cssClassName)
+                    result.addElement(
+                        lookupElement
+                            .withIcon(AllIcons.Xml.Css_class)
+                            .withTypeText(cssClassNameForFile.fileName, true)
+                    )
                 }
             }
         }
