@@ -18,7 +18,7 @@ internal class RazorCompletionProvider : CompletionProvider<CompletionParameters
     ) {
         val cssCompletionService = parameters.editor.project?.service<CssCompletionService>() ?: return
 
-        for (completion in cssCompletionService.cssCompletionItemsByProjectPath) {
+        for (completion in cssCompletionService.cssCompletionsByProjectPath) {
 
             //TODO: this matches too much...
             //      not sure if http parsed classes match here 
