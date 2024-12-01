@@ -27,6 +27,7 @@ class CssCompletionService(private val solutionProject: Project) {
             totalFiles += item.value.getTotalFileCount()
         }
 
+        // test commit
         StatusBar.Info.set(
             "Parsed $totalCssClassNames css classes from $totalFiles files in $executionTime ms", solutionProject
         )
