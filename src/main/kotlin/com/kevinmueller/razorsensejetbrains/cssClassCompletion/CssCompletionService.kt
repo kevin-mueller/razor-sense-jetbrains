@@ -35,27 +35,27 @@ class CssCompletionService(private val solutionProject: Project) {
     private fun updateCompletions(): Int {
         val projects = WorkspaceModel.getInstance(solutionProject).findProjects()
 
-        val cssCompletionItemsByProjectPath = mutableMapOf<String, CssClassCompletions>()
+        val cssCompletionsByProjectPath = mutableMapOf<String, CssClassCompletions>()
         var totalCssClassNames = 0
         for (project in projects) {
             if (project.url == null) continue
 
-            val localCssClassNames = getLocalCssClassNamesFromProject(project)
+            val localCssFiles = getLocalCssFilesFromProject(project)
 
             val indexHtmlFileInfo = getIndexHtmlInfoFromProject(project)
 
-            val remoteCssClassNames =
-                getRemoteCssClassNamesFromUrls(indexHtmlFileInfo.referencedCssFilePaths)
-            val allCssClassNames = localCssClassNames.union(remoteCssClassNames)
+            val remoteCssFiles =
+                getRemoteCssFilesFromUrls(indexHtmlFileInfo.referencedCssFilePaths)
+            val allCssClassNames = localCssFiles.union(remoteCssFiles)
 
             totalCssClassNames += allCssClassNames.flatMap { x -> x.cssClassNames }.count()
             val cssClassCompletions = CssClassCompletions(
                 allCssClassNames.toMutableSet(), indexHtmlFileInfo
             )
 
-            cssCompletionItemsByProjectPath[project.url!!.presentableUrl] = cssClassCompletions
+            cssCompletionsByProjectPath[project.url!!.presentableUrl] = cssClassCompletions
         }
-        this.cssCompletionsByProjectPath = cssCompletionItemsByProjectPath
+        this.cssCompletionsByProjectPath = cssCompletionsByProjectPath
 
         return totalCssClassNames
     }
@@ -94,18 +94,18 @@ class CssCompletionService(private val solutionProject: Project) {
         return IndexHtmlFileInfo(referencedCssFilePaths, foundIndexHtmlFile)
     }
 
-    private fun getLocalCssClassNamesFromProject(project: ProjectModelEntity): MutableList<CssClassesWithFileReference> {
+    private fun getLocalCssFilesFromProject(project: ProjectModelEntity): MutableList<CssFile> {
         val cssFiles = getAllCssFilesFromProject(project)
 
-        return cssFiles.map { cssFile -> getCssClassesForCssFile(cssFile) }.toMutableList()
+        return cssFiles.map { cssFile -> getClassNamesForCssFile(cssFile) }.toMutableList()
     }
 
-    private fun getRemoteCssClassNamesFromUrls(
+    private fun getRemoteCssFilesFromUrls(
         referencedCssFilePaths: List<String>
-    ): List<CssClassesWithFileReference> {
+    ): List<CssFile> {
         val cssFiles = referencedCssFilePaths.filter { x -> x.startsWith("https://") || x.startsWith("http://") }
 
-        return cssFiles.map { cssFile -> getCssClassesForCssFile(cssFile) }.toMutableList()
+        return cssFiles.map { cssFile -> getClassNamesForCssFile(cssFile) }.toMutableList()
     }
 
     private fun getAllCssFilesFromProject(project: ProjectModelEntity): Set<String> {
@@ -138,7 +138,7 @@ class CssCompletionService(private val solutionProject: Project) {
         return cssFiles
     }
 
-    private fun getCssClassesForCssFile(cssFile: String): CssClassesWithFileReference {
+    private fun getClassNamesForCssFile(cssFile: String): CssFile {
 
         var cssContent = ""
         try {
@@ -155,7 +155,7 @@ class CssCompletionService(private val solutionProject: Project) {
 
         val fileName = File(cssFile).name
 
-        return CssClassesWithFileReference(
+        return CssFile(
             classNames,
             fileName,
             cssFile,
@@ -197,40 +197,40 @@ class CssCompletionService(private val solutionProject: Project) {
 }
 
 class CssClassCompletions(
-    private val cssClassesFileReferences: MutableSet<CssClassesWithFileReference>,
+    private val cssFiles: MutableSet<CssFile>,
     private val indexHtmlFileInfo: IndexHtmlFileInfo
 ) {
-    fun getReferencedCssClasses(fileName: String?): Set<CssClassesWithFileReference> {
+    fun getReferencedCssClasses(fileName: String?): Set<CssFile> {
 
-        val result = mutableSetOf<CssClassesWithFileReference>()
+        val result = mutableSetOf<CssFile>()
 
         if (!indexHtmlFileInfo.hasIndexHtmlFile) {
-            result.addAll(cssClassesFileReferences.filter { x -> !x.isScopedCssFile }.toSet())
+            result.addAll(cssFiles.filter { x -> !x.isScopedCssFile }.toSet())
         }
 
-        for (cssClassNameFileReference in cssClassesFileReferences) {
-            if (cssClassNameFileReference.isScopedCssFile && fileName != null) {
-                if (cssClassNameFileReference.fileName.startsWith(fileName)) {
-                    result.add(cssClassNameFileReference)
+        for (cssFile in cssFiles) {
+            if (cssFile.isScopedCssFile && fileName != null) {
+                if (cssFile.fileName.startsWith(fileName)) {
+                    result.add(cssFile)
                 }
             }
 
             // is relevant for completion, if the css file is actually referenced by the index.html file 
             if (indexHtmlFileInfo.hasIndexHtmlFile && indexHtmlFileInfo.referencedCssFilePaths.any { relativeFilePath ->
-                    cssClassNameFileReference.filePath.contains(relativeFilePath)
+                    cssFile.filePath.contains(relativeFilePath)
                 }) {
-                result.add(cssClassNameFileReference)
+                result.add(cssFile)
             }
         }
         return result
     }
 
     fun getTotalFileCount(): Int {
-        return cssClassesFileReferences.distinctBy { x -> x.filePath }.count()
+        return cssFiles.distinctBy { x -> x.filePath }.count()
     }
 }
 
-class CssClassesWithFileReference(
+class CssFile(
     val cssClassNames: Set<String>,
     val fileName: String,
     val filePath: String,
