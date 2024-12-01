@@ -3,8 +3,12 @@
 # See https://plugins.jetbrains.com/docs/intellij/plugin-signing.html for more information.
 
 name: Release
-on: workflow_dispatch
-
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+      
 jobs:
 
   # Prepare and publish the plugin to JetBrains Marketplace repository
